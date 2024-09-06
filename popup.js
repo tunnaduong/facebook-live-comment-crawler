@@ -82,24 +82,30 @@ function extractAndSendData(
     comment: comments[index] || "N/A",
   }));
 
-  console.log("Extracted Data:", extractedData);
+  //   console.log("Extracted Data:", extractedData);
 
   // Send data to API
-  fetch("https://your-api-endpoint.com/endpoint", {
+  fetch("https://tunnaduong.com/test_api/fb_live_chat.php", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ content: extractedData }),
   })
     .then((response) => response.json())
     .then((data) => {
-      console.log("Success:", data);
-      document.getElementById("status").innerText =
-        "Comments extracted and sent!";
+      //   console.log("Success:", data);
+      chrome.runtime.sendMessage({ status: "Comments extracted and sent!" });
     })
     .catch((error) => {
       console.error("Error:", error);
-      document.getElementById("status").innerText = "Error occurred.";
+      chrome.runtime.sendMessage({ status: "Error occurred." });
     });
 }
+
+// Listen for messages from the content script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.status) {
+    document.getElementById("status").innerText = message.status;
+  }
+});
