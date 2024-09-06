@@ -1,26 +1,16 @@
-// Popup script: popup.js
-
-// Load saved values from localStorage when the popup is opened
+// Load saved values when the popup opens
 window.addEventListener("DOMContentLoaded", () => {
-  const savedUrlClassName = localStorage.getItem("urlClassName");
-  const savedCommentClassName = localStorage.getItem("commentClassName");
-  const savedEndCommentClassName = localStorage.getItem("endCommentClassName");
-  const timer = localStorage.getItem("timer");
-
-  // Set saved values to the input fields if available
-  if (savedUrlClassName) {
-    document.getElementById("urlClassName").value = savedUrlClassName;
-  }
-  if (savedCommentClassName) {
-    document.getElementById("commentClassName").value = savedCommentClassName;
-  }
-  if (savedEndCommentClassName) {
-    document.getElementById("endCommentClassName").value =
-      savedEndCommentClassName;
-  }
-  if (timer) {
-    document.getElementById("timer").value = timer;
-  }
+  chrome.storage.local.get(
+    ["urlClassName", "commentClassName", "endCommentClassName", "timer"],
+    (data) => {
+      document.getElementById("urlClassName").value = data.urlClassName || "";
+      document.getElementById("commentClassName").value =
+        data.commentClassName || "";
+      document.getElementById("endCommentClassName").value =
+        data.endCommentClassName || "";
+      document.getElementById("timer").value = data.timer || "";
+    }
+  );
 });
 
 document.getElementById("crawlButton").addEventListener("click", () => {
@@ -43,87 +33,29 @@ document.getElementById("crawlButton").addEventListener("click", () => {
     !endCommentClassName ||
     isNaN(timerValue)
   ) {
-    document.getElementById("status").innerText = "Please fill in both fields.";
+    document.getElementById("status").innerText =
+      "Please fill in all fields correctly.";
     return;
   }
 
-  // Save input values to localStorage
-  localStorage.setItem("urlClassName", urlClassName);
-  localStorage.setItem("commentClassName", commentClassName);
-  localStorage.setItem("endCommentClassName", endCommentClassName);
-  localStorage.setItem("timer", timerValue);
-
-  // Set interval to recrawl and send data to API
-  setInterval(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      chrome.scripting.executeScript({
-        target: { tabId: tabs[0].id },
-        function: extractAndSendData,
-        args: [urlClassName, commentClassName, endCommentClassName],
-      });
-    });
-  }, timerValue);
-
-  document.getElementById("status").innerText = "Extracting comments...";
+  // Send start message to background script
+  chrome.runtime.sendMessage(
+    {
+      action: "startExtraction",
+      urlClassName,
+      commentClassName,
+      endCommentClassName,
+      timer: timerValue,
+    },
+    (response) => {
+      document.getElementById("status").innerText = response.status;
+    }
+  );
 });
 
-// Define the function to be executed in the content script context
-function extractAndSendData(
-  urlClassName,
-  commentClassName,
-  endCommentClassName
-) {
-  // Create dynamic regex patterns with the class names
-  const authorPattern = new RegExp(`=R&amp;paipv=0">(.*?)<\/a`, "g"); // Example for URL class name
-  const commentContentPattern = new RegExp(
-    `class="${commentClassName}">(.*?)<\\/div><div class="${endCommentClassName}"`,
-    "g"
-  ); // Example for comment class name
-  const profileUrlPattern = new RegExp(`${urlClassName}" href="(.*?)eav`, "g"); // Author's profile URL
-
-  const html = document.documentElement.innerHTML;
-
-  // Extracting authors, profile URLs, and comments
-  const authors = [...html.matchAll(authorPattern)].map((match) => match[1]);
-  const profileUrls = [...html.matchAll(profileUrlPattern)].map(
-    (match) => match[1]
-  );
-  const comments = [...html.matchAll(commentContentPattern)].map(
-    (match) => match[1]
-  );
-
-  // Combine extracted data into a structured JSON array
-  const extractedData = authors.map((name, index) => ({
-    profile_url: profileUrls[index] || "N/A",
-    name: name || "N/A",
-    comment: comments[index] || "N/A",
-  }));
-
-  //   console.log("Extracted Data:", extractedData);
-
-  // Send data to API
-  fetch("https://tunnaduong.com/test_api/fb_live_chat.php", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ content: extractedData }),
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      //   console.log("Success:", data);
-      console.log("success");
-      chrome.runtime.sendMessage({ status: "Comments extracted and sent!" });
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      chrome.runtime.sendMessage({ status: "Error occurred." });
-    });
-}
-
-// Listen for messages from the content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.status) {
-    document.getElementById("status").innerText = message.status;
-  }
+document.getElementById("stopButton").addEventListener("click", () => {
+  // Send stop message to the background script
+  chrome.runtime.sendMessage({ action: "stopExtraction" }, (response) => {
+    document.getElementById("status").innerText = response.status;
+  });
 });
