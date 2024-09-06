@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Comment Extractor</title>
+    <style>
+      body {
+        width: 300px;
+        padding: 10px;
+      }
+      input,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Comment Extractor</h1>
+    <label for="urlClassName">URL Class Name:</label>
+    <input type="text" id="urlClassName" placeholder="Enter URL class name" />
+    <label for="commentClassName">Comment Class Name:</label>
+    <input
+      type="text"
+      id="commentClassName"
+      placeholder="Enter Comment class name"
+    />
+    <label for="endCommentClassName">End Comment Class Name:</label>
+    <input
+      type="text"
+      id="endCommentClassName"
+      placeholder="Enter End Comment class name"
+    />
+    <button id="crawlButton">Extract Comments</button>
+    <div id="status"></div>
+    <script src="popup.js"></script>
+  </body>
+</html>
