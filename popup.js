@@ -5,6 +5,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const savedUrlClassName = localStorage.getItem("urlClassName");
   const savedCommentClassName = localStorage.getItem("commentClassName");
   const savedEndCommentClassName = localStorage.getItem("endCommentClassName");
+  const timer = localStorage.getItem("timer");
 
   // Set saved values to the input fields if available
   if (savedUrlClassName) {
@@ -17,6 +18,9 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("endCommentClassName").value =
       savedEndCommentClassName;
   }
+  if (timer) {
+    document.getElementById("timer").value = timer;
+  }
 });
 
 document.getElementById("crawlButton").addEventListener("click", () => {
@@ -27,9 +31,18 @@ document.getElementById("crawlButton").addEventListener("click", () => {
   const endCommentClassName = document
     .getElementById("endCommentClassName")
     .value.trim();
+  const timerValue = parseInt(
+    document.getElementById("timer").value.trim(),
+    10
+  );
 
   // Validate inputs
-  if (!urlClassName || !commentClassName || !endCommentClassName) {
+  if (
+    !urlClassName ||
+    !commentClassName ||
+    !endCommentClassName ||
+    isNaN(timerValue)
+  ) {
     document.getElementById("status").innerText = "Please fill in both fields.";
     return;
   }
@@ -38,14 +51,18 @@ document.getElementById("crawlButton").addEventListener("click", () => {
   localStorage.setItem("urlClassName", urlClassName);
   localStorage.setItem("commentClassName", commentClassName);
   localStorage.setItem("endCommentClassName", endCommentClassName);
+  localStorage.setItem("timer", timerValue);
 
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    chrome.scripting.executeScript({
-      target: { tabId: tabs[0].id },
-      function: extractAndSendData,
-      args: [urlClassName, commentClassName, endCommentClassName],
+  // Set interval to recrawl and send data to API
+  setInterval(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.scripting.executeScript({
+        target: { tabId: tabs[0].id },
+        function: extractAndSendData,
+        args: [urlClassName, commentClassName, endCommentClassName],
+      });
     });
-  });
+  }, timerValue);
 
   document.getElementById("status").innerText = "Extracting comments...";
 });
@@ -95,6 +112,7 @@ function extractAndSendData(
     .then((response) => response.json())
     .then((data) => {
       //   console.log("Success:", data);
+      console.log("success");
       chrome.runtime.sendMessage({ status: "Comments extracted and sent!" });
     })
     .catch((error) => {
