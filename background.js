@@ -89,6 +89,9 @@ function extractAndSendData(
     .then((data) => {
       console.log("Success:", data);
       chrome.runtime.sendMessage({ status: "Comments extracted and sent!" });
+
+      // Refresh the page
+      window.location.reload();
     })
     .catch((error) => {
       console.error("Error:", error);
